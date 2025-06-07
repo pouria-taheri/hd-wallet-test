@@ -1,0 +1,60 @@
+debug: true
+http:
+  Address: 0.0.0.0:8070
+  development: false
+  logger:
+    type: zap
+    level: debug
+    development: false
+    skipPaths:
+      - /monitoring/health
+      - /monitoring/metrics
+logger:
+  type: zap
+  level: debug
+  encoding: console
+  development: false
+eth:
+  chainType: mainnet
+  secureConfigPath: temp/secured-config.yaml
+  password:
+trx:
+  chainType: mainnet
+  secureConfigPath: temp/secured-config.yaml
+  password:
+bnb:
+  secureConfigPath: temp/secured-config.yaml
+  network_id: 1 #TestNetwork:0, ProdNetwork:1, TmpTestNetwork:2, GangesNetwork:3
+btc:
+  chainType: mainnet
+  secureConfigPath: temp/secured-config.yaml
+ltc:
+  chainType: mainnet
+  secureConfigPath: temp/secured-config.yaml
+doge:
+  chainType: regtest
+  secureConfigPath: temp/secured-config.yaml
+eos:
+  secureConfigPath: temp/secured-config.yaml
+  chainId: 2a02a0053e5a8cf73a56ba0fda11e4d92e0238a4a2aa74fccf46d5a910746840
+
+availableCoins:
+  #  - eth
+  #  - btc
+  #  - trx
+  #  - bnb
+  #  - doge
+  - ltc
+
+salt: c309278c44aa43f9bd45c6e9bc203c86
+cmd:
+  server:
+    grpc:
+      enabled: false
+      address: 0.0.0.0:5050
+  client:
+    cli:
+      enabled: true
+    grpc:
+      enabled: false
+      address: 127.0.0.1:5050

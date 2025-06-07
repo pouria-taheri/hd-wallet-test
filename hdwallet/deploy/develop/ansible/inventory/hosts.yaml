@@ -1,0 +1,7 @@
+all:
+  hosts:
+    MXS-HDWAL-A-THV:
+      ansible_host: misca-dev.mazdax.tech
+      ansible_port: 22
+      ansible_become: true
+      ansible_ssh_user: ansible

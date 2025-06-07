@@ -1,0 +1,16 @@
+[Unit]
+Description=hdwallet
+After=network.target
+
+[Service]
+Type=simple
+User={{ hdwallet.user }}
+Group={{ hdwallet.group }}
+PIDFile=/run/hdwallet.pid
+WorkingDirectory={{ hdwallet.root.path }}
+ExecStart={{ hdwallet.root.path }}/hdwallet
+ExecStop=/bin/kill -15 $MAINPID
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

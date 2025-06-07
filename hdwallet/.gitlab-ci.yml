@@ -1,0 +1,148 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_MESSAGE =~ /^(WIP|wip):/
+      when: never
+    - when: always
+
+stages:
+#  - test
+  - build
+  - deploy
+
+variables:
+  CGO_ENABLED: "1"
+  GOARCH: "amd64"
+  GOPRIVATE: "git.mazdax.tech"
+  SERVICE_NAME: $CI_PROJECT_NAME
+
+.build_otf:
+  script: &build_otf
+    - go env
+    - go fmt && go vet
+    - mkdir _build
+    - go build -o _build/$CI_PROJECT_NAME .
+
+.build_standalone:
+  script: &build_standalone
+    - go env
+    - go fmt & go vet
+    - mkdir _build
+    - go build -o _build/$SERVICE_NAME
+
+.deploy_standalone:
+  script: &deploy_standalone
+    - git clone git@git.mazdax.tech:sre/ansible-playbooks.git
+    - mkdir ansible-playbooks/hdwallet/files
+    - mkdir ansible-playbooks/hdwallet/inventory/mazdax-$ANSIBLE_ENV
+    - cp -r _build/$SERVICE_NAME ansible-playbooks/hdwallet/files/$SERVICE_NAME
+    - cp -r deploy/$ANSIBLE_ENV/ansible/inventory/* ansible-playbooks/hdwallet/inventory/mazdax-$ANSIBLE_ENV/
+    - cp -r deploy/templates/* ansible-playbooks/hdwallet/roles/hdwallet/templates/
+    - ANSIBLE_HOST_KEY_CHECKING=false
+    - ansible-playbook -i ansible-playbooks/hdwallet/inventory/mazdax-$ANSIBLE_ENV/hosts.yaml -v  ansible-playbooks/hdwallet/main.yml
+
+#unit-test:
+#  image: registry.mazdax.tech/sre/dind-go:1.0.0
+#  stage: test
+#  script:
+#    - go get golang.org/x/tools/cmd/cover
+#    - go test './...' -v xxx -json > test.json
+#    - go test -coverprofile=covprofile
+#    - go test "./..." -v xxx -coverprofile="coverage.out" -covermode=count -json > report.json;
+#    - cat report.json
+#  tags:
+#    - mazdax-shared
+#  allow_failure: true
+#  artifacts:
+#    paths: [report.json]
+#    expire_in: 1 week
+
+build-otf:
+  image: registry.mazdax.tech/sre/dind-go:1.0.0
+  stage: build
+  retry: 2
+  script: *build_otf
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME != "develop"'
+  tags:
+    - mazdax-shared
+
+build-dev:
+  stage: build
+  retry: 2
+  script: *build_standalone
+  image: registry.mazdax.tech/sre/dind-go:1.0.0
+  artifacts:
+    expire_in: 30 mins
+    paths:
+      - _build/$SERVICE_NAME
+  only:
+    - develop
+  tags:
+    - mazdax-dev
+
+build-stg:
+  stage: build
+  retry: 2
+  script: *build_standalone
+  image: registry.mazdax.tech/sre/dind-go:1.0.0
+  artifacts:
+    expire_in: 30 mins
+    paths:
+      - _build/$SERVICE_NAME
+  only:
+    - staging
+  tags:
+    - mazdax-stg
+
+build-prod:
+  stage: build
+  retry: 2
+  script: *build_standalone
+  image: registry.mazdax.tech/sre/dind-go:1.0.0
+  artifacts:
+    expire_in: 30 mins
+    paths:
+      - _build/$SERVICE_NAME
+  only:
+    - tags
+  tags:
+    - mazdax-prod
+
+deploy-dev:
+  stage: deploy
+  image: registry.mazdax.tech/sre/dind-ansible:1.0.0
+  retry: 2
+  script: *deploy_standalone
+  variables:
+    ANSIBLE_ENV: develop
+  only:
+    - develop
+  tags:
+    - mazdax-dev
+  when: manual
+
+deploy-stg:
+  stage: deploy
+  image: registry.mazdax.tech/sre/dind-ansible:1.0.0
+  retry: 2
+  script: *deploy_standalone
+  variables:
+    ANSIBLE_ENV: staging
+  only:
+    - staging
+  tags:
+    - mazdax-stg
+  when: manual
+
+deploy-prod:
+  stage: deploy
+  image: registry.mazdax.tech/sre/dind-ansible:1.0.0
+  retry: 2
+  script: *deploy_standalone
+  variables:
+    ANSIBLE_ENV: production
+  only:
+    - tags
+  tags:
+    - mazdax-prod
+  when: manual

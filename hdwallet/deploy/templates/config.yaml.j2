@@ -1,0 +1,51 @@
+debug: {{ debug }}
+http:
+  Address: {{ http.Address }}
+  development: {{ http.development }}
+  logger:
+    type: {{ http.logger.type }}
+    level: {{ http.logger.level }}
+    development: {{ http.logger.development }}
+    skipPaths: {{ http.logger.skipPaths |to_json }}
+
+
+logger:
+  type: {{ logger.type }}
+  level: {{ logger.level }}
+  encoding: {{ logger.encoding }}
+  development: {{ logger.development }}
+
+{% if availableCoins is defined %}
+{% for coin,coinConfig in availableCoins.items() %}
+{{ coin }}: {{ coinConfig | to_json }}
+{% endfor %}
+{% endif %}
+
+{% if availableCoins is defined %}
+availableCoins:
+{% for coin,coinConfig in availableCoins.items() %}
+  - {{ coin }}
+{% endfor %}
+{% endif %}
+
+ 
+salt: {{ salt }}
+cmd:
+  server:
+    grpc:
+      enabled: "{{ grpc.enabled }}"
+      address: "{{ grpc.address }}:{{ grpc.port }}"
+{% if certificate.type != "none" %}
+      tlsCertFile: "{{ grpc.tlsCertFile }}"
+      tlsKeyFile: "{{ grpc.tlsKeyFile }}"
+{% endif %}
+
+  client:
+    cli:
+      enabled: "{{ grpc.client.cli.enabled}}"
+    grpc:
+      enabled: "{{ grpc.client.grpc.enabled}}"
+      address: "{{ grpc.client.grpc.address}}:{{ grpc.client.grpc.port }}"
+{% if certificate.type != "none" %}
+      CAFile: "{{ grpc.client.grpc.cafile }}"
+{% endif %}

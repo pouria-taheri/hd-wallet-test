@@ -1,0 +1,35 @@
+syntax = "proto3";
+package rpc;
+
+option go_package = "git.mazdax.tech/blockchain/proto/hdwallet";
+
+enum MessageTypeEnum {
+    Generate = 0;
+    Encrypt = 1;
+    Decrypt = 2;
+    Unlock = 3;
+
+    Error = 100;
+    Message = 101;
+    TextInput = 102;
+    PasswordInput = 103;
+    File = 104;
+
+    Done = 200;
+
+    Ping = 999;
+    Pong = 1000;
+
+    Unknown = -1;
+}
+
+message Body {
+    MessageTypeEnum type = 1;
+    repeated string args = 2;
+    string message = 3;
+    bytes data = 4;
+}
+
+service HdWallet {
+    rpc Command(stream Body) returns (stream Body);
+}

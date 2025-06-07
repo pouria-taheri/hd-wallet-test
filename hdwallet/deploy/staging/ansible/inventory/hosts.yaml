@@ -1,0 +1,7 @@
+all:
+  hosts:
+    MXS-HDWAL-A-THV:
+      ansible_host: 172.17.16.63
+      ansible_port: 22
+      ansible_become: true
+      ansible_ssh_user: ansible
