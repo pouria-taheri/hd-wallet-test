@@ -1,15 +1,15 @@
 package usecase
 
 import (
+	"fmt"
+
 	ad "git.mazdax.tech/blockchain/hdwallet/account/domain"
 	domain "git.mazdax.tech/blockchain/hdwallet/coins/hedera/account/domain"
+	"git.mazdax.tech/blockchain/hdwallet/coins/hedera/wallet"
 	"git.mazdax.tech/blockchain/hdwallet/config"
 	"git.mazdax.tech/data-layer/configcore"
 	"git.mazdax.tech/data-layer/loggercore/logger"
 	"github.com/hashgraph/hedera-sdk-go/v2"
-	"github.com/tyler-smith/go-bip39"
-	"github.com/tyler-smith/go-bip32"
-	"fmt"
 )
 
 type useCase struct {
@@ -19,6 +19,7 @@ type useCase struct {
 	client            *hedera.Client
 	operatorAccountID hedera.AccountID
 	operatorPrivKey   hedera.PrivateKey
+	wallet            *wallet.HederaWallet
 }
 
 func New(logger logger.Logger, registry configcore.Registry,
@@ -31,11 +32,12 @@ func New(logger logger.Logger, registry configcore.Registry,
 		panic(err)
 	}
 	uc.Config.Initialize(secureConfig)
+	uc.wallet = wallet.NewHederaHdWallet(&uc.Config, logger)
 
 	// Hedera-specific initialization
 	// Read network and operator credentials from config
-	network := uc.Config.ChainType // e.g., "mainnet" or "testnet"
-	operatorIDStr := uc.Config.SecureConfig.OperatorAccountID // Add this field to your config
+	network := uc.Config.ChainType                              // e.g., "mainnet" or "testnet"
+	operatorIDStr := uc.Config.SecureConfig.OperatorAccountID   // Add this field to your config
 	operatorKeyStr := uc.Config.SecureConfig.OperatorPrivateKey // Add this field to your config
 
 	fmt.Println("OperatorAccountID:", operatorIDStr)
@@ -63,37 +65,6 @@ func New(logger logger.Logger, registry configcore.Registry,
 	uc.operatorPrivKey = operatorPrivKey
 
 	return uc
-}
-
-// DeriveHederaKey derives a Hedera Ed25519 private key from a mnemonic and BIP44 path.
-func DeriveHederaKey(mnemonic string, account, change, addressIndex uint32) (hedera.PrivateKey, error) {
-	seed := bip39.NewSeed(mnemonic, "")
-	masterKey, err := bip32.NewMasterKey(seed)
-	if err != nil {
-		return hedera.PrivateKey{}, err
-	}
-	// BIP44 path: m/44'/3030'/account'/change/address_index
-	purpose, _ := masterKey.NewChildKey(bip32.FirstHardenedChild + 44)
-	coinType, _ := purpose.NewChildKey(bip32.FirstHardenedChild + 3030)
-	accountKey, _ := coinType.NewChildKey(bip32.FirstHardenedChild + account)
-	changeKey, _ := accountKey.NewChildKey(change)
-	addressKey, _ := changeKey.NewChildKey(addressIndex)
-	// Ed25519 private key from final key
-	privKey, err := hedera.PrivateKeyFromBytes(addressKey.Key)
-	if err != nil {
-		return hedera.PrivateKey{}, err
-	}
-	return privKey, nil
-}
-
-// DeriveHederaPublicKey derives the public key from mnemonic and BIP44 path.
-func DeriveHederaPublicKey(mnemonic string, account, change, addressIndex uint32) (string, error) {
-	privKey, err := DeriveHederaKey(mnemonic, account, change, addressIndex)
-	if err != nil {
-		return "", err
-	}
-	pubKey := privKey.PublicKey()
-	return pubKey.String(), nil
 }
 
 // CreateAccountOnChain creates a Hedera account using the provided public key and returns the new account ID.
@@ -139,18 +110,5 @@ func (u *useCase) Coin() string {
 }
 
 func (u *useCase) GetAccount(request ad.Request) (*ad.Account, error) {
-	// Derive public key from mnemonic and path
-	pubKeyStr, err := DeriveHederaPublicKey(u.Config.Mnemonic, request.Account, request.Branch, request.Index)
-	if err != nil {
-		return nil, err
-	}
-	// For now, use the public key as the address (Hedera account ID is created on-chain)
-	account := &ad.Account{
-		Index:     request.Index,
-		Type:      0, // custom type for Hedera
-		Address:   pubKeyStr,
-		PublicKey: []byte(pubKeyStr),
-		Ed25519PublicKey: []byte(pubKeyStr),
-	}
-	return account, nil
-} 
+	return u.wallet.GetAccount(u.Config.Mnemonic, request.Account, request.Branch, request.Index)
+}
