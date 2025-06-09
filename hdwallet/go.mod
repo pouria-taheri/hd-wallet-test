@@ -50,6 +50,7 @@ require (
 	github.com/xana-rahmani/ripple v0.0.1
 	github.com/zondax/ledger-go v0.12.2 // indirect
 	github.com/hashgraph/hedera-sdk-go v1.28.0
+	github.com/ChainSafe/slip10 v1.0.0
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf
 	google.golang.org/grpc v1.38.0
